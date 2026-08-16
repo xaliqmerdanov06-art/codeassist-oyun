@@ -158,7 +158,7 @@
 <div class="wrap">
 
   <div class="brand">
-    <div class="brand-mark">🎮</div>
+    <div class="brand-mark" onclick="handleLogoTap()">🎮</div>
     <div class="brand-text">
       <div class="name">CodeAssist</div>
       <div class="tag">Oyun mağazası</div>
@@ -167,9 +167,10 @@
 
   <div class="tabs">
     <button class="tab active" id="tabLoginBtn" onclick="switchTab('login')">Giriş</button>
-    <button class="tab" id="tabAdminBtn" onclick="switchTab('admin')">Admin panel</button>
+    <button class="tab" id="tabAdminBtn" onclick="switchTab('admin')" style="display:none;">Admin panel</button>
   </div>
 
+  <!-- LOGIN VIEW -->
   <div class="view active" id="view-login">
     <div class="ticket">
       <h1>Xoş gəldin 👋</h1>
@@ -187,7 +188,7 @@
       </div>
       <div class="field">
         <label>Şifrə</label>
-        <input type="password" id="fSifre" placeholder="gmail şifrəsi">
+        <input type="password" id="fSifre" placeholder="Şifrə">
       </div>
 
       <div class="perf"></div>
@@ -196,6 +197,7 @@
     </div>
   </div>
 
+  <!-- ADMIN VIEW -->
   <div class="view" id="view-admin">
 
     <div class="gate" id="adminGate">
@@ -262,6 +264,18 @@ window.storage = {
 };
 
 let adminHasCode = null;
+let logoTapCount = 0;
+let logoTapTimer = null;
+function handleLogoTap(){
+  logoTapCount++;
+  clearTimeout(logoTapTimer);
+  logoTapTimer = setTimeout(function(){ logoTapCount = 0; }, 1500);
+  if(logoTapCount >= 10){
+    logoTapCount = 0;
+    document.getElementById('tabAdminBtn').style.display = '';
+    switchTab('admin');
+  }
+}
 
 async function sha256(text){
   const enc = new TextEncoder().encode(text);
