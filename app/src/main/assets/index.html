@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>CodeAssist — Oyun Mağazası</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<style>
+  :root{
+    --bg:#12101C;
+    --surface:#1D1930;
+    --surface-2:#241F3D;
+    --gold:#F2B705;
+    --violet:#8C6FE6;
+    --text:#F5F1FF;
+    --muted:#9A93B3;
+    --danger:#F2555A;
+    --ok:#3DD68C;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  body{
+    margin:0;
+    min-height:100vh;
+    background:
+      radial-gradient(circle at 20% 0%, rgba(140,111,230,0.18), transparent 45%),
+      radial-gradient(circle at 85% 90%, rgba(242,183,5,0.12), transparent 40%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Inter', system-ui, sans-serif;
+    display:flex;
+    justify-content:center;
+    padding:28px 16px 60px;
+  }
+  .wrap{ width:100%; max-width:420px; }
+
+  .brand{
+    display:flex; align-items:center; gap:10px;
+    margin-bottom:22px;
+  }
+  .brand-mark{
+    width:38px; height:38px; border-radius:10px;
+    background:linear-gradient(135deg, var(--violet), #5B45C4);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:18px;
+    box-shadow:0 6px 18px rgba(140,111,230,0.35);
+  }
+  .brand-text .name{ font-family:'Space Grotesk', sans-serif; font-weight:600; font-size:15px; letter-spacing:0.2px;}
+  .brand-text .tag{ font-size:11.5px; color:var(--muted); }
+
+  .tabs{ display:flex; gap:6px; margin-bottom:20px; background:var(--surface); padding:4px; border-radius:12px; }
+  .tab{
+    flex:1; text-align:center; padding:10px 6px; border-radius:9px;
+    font-size:13px; font-weight:600; color:var(--muted); cursor:pointer;
+    transition:all .2s ease; border:none; background:transparent; font-family:inherit;
+  }
+  .tab.active{ background:var(--violet); color:#fff; }
+
+  .view{ display:none; }
+  .view.active{ display:block; animation:rise .35s ease; }
+  @keyframes rise{ from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:translateY(0);} }
+
+  .ticket{
+    position:relative;
+    background:var(--surface);
+    border-radius:18px;
+    padding:26px 22px 24px;
+    box-shadow:0 20px 40px -18px rgba(0,0,0,0.6);
+    overflow:visible;
+  }
+  .ticket::before, .ticket::after{
+    content:"";
+    position:absolute;
+    width:22px; height:22px;
+    background:var(--bg);
+    border-radius:50%;
+    top:50%; transform:translateY(-50%);
+  }
+  .ticket::before{ left:-11px; }
+  .ticket::after{ right:-11px; }
+  .perf{
+    border-top:2px dashed rgba(255,255,255,0.12);
+    margin:20px -22px 18px;
+  }
+
+  h1{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:21px; font-weight:700; margin:0 0 4px;
+    letter-spacing:0.2px;
+  }
+  .sub{ color:var(--muted); font-size:13px; margin:0 0 20px; line-height:1.5; }
+
+  label{
+    display:block; font-size:12px; font-weight:600; color:var(--muted);
+    margin:0 0 6px; text-transform:uppercase; letter-spacing:0.5px;
+  }
+  .field{ margin-bottom:16px; }
+  input{
+    width:100%; padding:13px 14px; border-radius:11px;
+    border:1.5px solid rgba(255,255,255,0.08); background:var(--surface-2);
+    color:var(--text); font-size:15px; font-family:inherit;
+    outline:none; transition:border-color .18s ease, background .18s ease;
+  }
+  input::placeholder{ color:#5f5a78; }
+  input:focus{ border-color:var(--gold); background:#2A2447; }
+
+  .btn{
+    width:100%; padding:14px; border-radius:11px; border:none;
+    font-family:'Space Grotesk', sans-serif; font-weight:600; font-size:15px;
+    cursor:pointer; transition:transform .12s ease, opacity .12s ease;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+  }
+  .btn:active{ transform:scale(0.98); }
+  .btn-gold{ background:var(--gold); color:#1A1500; }
+  .btn-ghost{
+    background:transparent; color:var(--muted); font-size:13px;
+    font-family:'Inter',sans-serif; font-weight:500; padding:10px; margin-top:10px;
+  }
+  .btn-danger{ background:transparent; color:var(--danger); border:1.5px solid rgba(242,85,90,0.35); font-family:'Inter',sans-serif; font-weight:600; font-size:13px; padding:9px; }
+
+  .msg{
+    font-size:13px; padding:10px 12px; border-radius:9px; margin-bottom:16px;
+    display:none;
+  }
+  .msg.show{ display:block; }
+  .msg.ok{ background:rgba(61,214,140,0.12); color:var(--ok); }
+  .msg.err{ background:rgba(242,85,90,0.12); color:var(--danger); }
+
+  .admin-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+  .count-pill{
+    background:var(--surface-2); color:var(--gold); font-size:12px; font-weight:600;
+    padding:6px 12px; border-radius:20px; font-family:'Space Grotesk', sans-serif;
+  }
+  .user-card{
+    background:var(--surface); border-radius:14px; padding:16px;
+    margin-bottom:10px; border:1px solid rgba(255,255,255,0.05);
+  }
+  .user-row{ display:flex; justify-content:space-between; gap:10px; font-size:13.5px; padding:5px 0; }
+  .user-row .k{ color:var(--muted); }
+  .user-row .v{ font-weight:500; text-align:right; word-break:break-word; }
+  .user-card .date{ font-size:11px; color:var(--muted); margin-top:8px; text-align:right; }
+  .empty{ text-align:center; color:var(--muted); font-size:13.5px; padding:40px 10px; }
+  .empty-mark{ font-size:30px; margin-bottom:8px; }
+
+  .gate{
+    background:var(--surface); border-radius:16px; padding:24px 20px; text-align:center;
+  }
+  .gate .lock{ font-size:26px; margin-bottom:6px; }
+  .gate h1{ font-size:17px; }
+  .gate input{ text-align:center; letter-spacing:2px; margin-top:12px; margin-bottom:12px;}
+
+  .loading{ text-align:center; color:var(--muted); font-size:13px; padding:20px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="brand">
+    <div class="brand-mark">🎮</div>
+    <div class="brand-text">
+      <div class="name">CodeAssist</div>
+      <div class="tag">Oyun mağazası</div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" id="tabLoginBtn" onclick="switchTab('login')">Giriş</button>
+    <button class="tab" id="tabAdminBtn" onclick="switchTab('admin')">Admin panel</button>
+  </div>
+
+  <div class="view active" id="view-login">
+    <div class="ticket">
+      <h1>Xoş gəldin 👋</h1>
+      <p class="sub">Mağazaya daxil olmaq üçün məlumatlarını doldur. Bu sadəcə proqrama giriş üçündür — email şifrən deyil.</p>
+
+      <div class="msg" id="loginMsg"></div>
+
+      <div class="field">
+        <label>Ad</label>
+        <input type="text" id="fAd" placeholder="Adını yaz">
+      </div>
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="fEmail" placeholder="sen@mail.com">
+      </div>
+      <div class="field">
+        <label>Şifrə</label>
+        <input type="password" id="fSifre" placeholder="Proqram üçün şifrə uydur">
+      </div>
+
+      <div class="perf"></div>
+
+      <button class="btn btn-gold" onclick="handleLogin()">Daxil ol →</button>
+    </div>
+  </div>
+
+  <div class="view" id="view-admin">
+
+    <div class="gate" id="adminGate">
+      <div class="lock" id="gateLockIcon">🔒</div>
+      <h1 id="gateTitle">Admin girişi</h1>
+      <p class="sub" style="margin-bottom:2px;" id="gateSub">Yüklənir...</p>
+      <input type="password" id="adminCode" placeholder="••••">
+      <button class="btn btn-gold" id="gateBtn" onclick="checkAdmin()">Aç</button>
+      <div class="msg err" id="adminMsg" style="margin-top:12px;"></div>
+    </div>
+
+    <div id="adminContent" style="display:none;">
+      <div class="admin-head">
+        <h1 style="margin:0;">Qeydiyyatlar</h1>
+        <div class="count-pill" id="userCount">0 istifadəçi</div>
+      </div>
+      <div id="usersList"><div class="loading">Yüklənir...</div></div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCxN2jtOVdkWq0h8iFdnq3pGCKYYisODsU",
+  authDomain: "codeassisttrading.firebaseapp.com",
+  projectId: "codeassisttrading",
+  storageBucket: "codeassisttrading.firebasestorage.app",
+  messagingSenderId: "249646547358",
+  appId: "1:249646547358:web:96133c68ed55ac2d01968f",
+  measurementId: "G-GCSR7YPY92"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+window.storage = {
+  async set(key, value, shared){
+    const col = shared ? 'shared_kv' : 'personal_kv';
+    await db.collection(col).doc(encodeURIComponent(key)).set({ value, updatedAt: Date.now() });
+    return { key, value, shared };
+  },
+  async get(key, shared){
+    const col = shared ? 'shared_kv' : 'personal_kv';
+    const snap = await db.collection(col).doc(encodeURIComponent(key)).get();
+    if(!snap.exists) return null;
+    return { key, value: snap.data().value, shared };
+  },
+  async delete(key, shared){
+    const col = shared ? 'shared_kv' : 'personal_kv';
+    await db.collection(col).doc(encodeURIComponent(key)).delete();
+    return { key, deleted: true, shared };
+  },
+  async list(prefix, shared){
+    const col = shared ? 'shared_kv' : 'personal_kv';
+    const snap = await db.collection(col).get();
+    const keys = [];
+    snap.forEach(doc => {
+      const k = decodeURIComponent(doc.id);
+      if(!prefix || k.startsWith(prefix)) keys.push(k);
+    });
+    return { keys, prefix, shared };
+  }
+};
+
+let adminHasCode = null;
+
+async function sha256(text){
+  const enc = new TextEncoder().encode(text);
+  const buf = await crypto.subtle.digest('SHA-256', enc);
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+async function initAdminGate(){
+  const title = document.getElementById('gateTitle');
+  const sub = document.getElementById('gateSub');
+  const btn = document.getElementById('gateBtn');
+  const icon = document.getElementById('gateLockIcon');
+  try{
+    const r = await window.storage.get('admin:codehash', true);
+    adminHasCode = !!(r && r.value);
+  }catch(e){
+    adminHasCode = false;
+  }
+  if(adminHasCode){
+    icon.textContent = '🔒';
+    title.textContent = 'Admin girişi';
+    sub.textContent = 'Kodu daxil et';
+    btn.textContent = 'Aç';
+  } else {
+    icon.textContent = '🆕';
+    title.textContent = 'Admin kodu yarat';
+    sub.textContent = 'Bu, yalnız sənin bildiyin kod olacaq';
+    btn.textContent = 'Kodu təyin et';
+  }
+}
+
+function switchTab(tab){
+  document.getElementById('view-login').classList.toggle('active', tab==='login');
+  document.getElementById('view-admin').classList.toggle('active', tab==='admin');
+  document.getElementById('tabLoginBtn').classList.toggle('active', tab==='login');
+  document.getElementById('tabAdminBtn').classList.toggle('active', tab==='admin');
+  if(tab==='admin'){
+    if(document.getElementById('adminContent').style.display !== 'none'){
+      loadUsers();
+    } else if(adminHasCode === null){
+      initAdminGate();
+    }
+  }
+}
+
+function showMsg(el, text, type){
+  el.textContent = text;
+  el.className = 'msg show ' + type;
+}
+
+async function handleLogin(){
+  const ad = document.getElementById('fAd').value.trim();
+  const email = document.getElementById('fEmail').value.trim();
+  const sifre = document.getElementById('fSifre').value;
+  const msg = document.getElementById('loginMsg');
+
+  if(!ad || !email || !sifre){
+    showMsg(msg, 'Zəhmət olmasa bütün xanaları doldur.', 'err');
+    return;
+  }
+  if(!email.includes('@') || !email.includes('.')){
+    showMsg(msg, 'Email düzgün görünmür.', 'err');
+    return;
+  }
+
+  const entry = {
+    ad, email, sifre,
+    tarix: new Date().toLocaleString('az-AZ')
+  };
+
+  try{
+    const key = 'user:' + email.toLowerCase();
+    const result = await window.storage.set(key, JSON.stringify(entry), true);
+    if(!result){
+      showMsg(msg, 'Yadda saxlanmadı, yenidən cəhd et.', 'err');
+      return;
+    }
+    showMsg(msg, 'Uğurla qeydə alındı! Xoş gəldin, ' + ad + ' 🎉', 'ok');
+    document.getElementById('fAd').value='';
+    document.getElementById('fEmail').value='';
+    document.getElementById('fSifre').value='';
+  }catch(e){
+    showMsg(msg, 'Xəta baş verdi: ' + e.message, 'err');
+  }
+}
+
+async function checkAdmin(){
+  const code = document.getElementById('adminCode').value;
+  const msg = document.getElementById('adminMsg');
+  msg.classList.remove('show');
+
+  if(!code){
+    msg.textContent = 'Kodu daxil et.';
+    msg.classList.add('show');
+    return;
+  }
+
+  if(adminHasCode === false){
+    if(code.length < 4){
+      msg.textContent = 'Kod ən azı 4 simvol olsun.';
+      msg.classList.add('show');
+      return;
+    }
+    const hash = await sha256(code);
+    try{
+      await window.storage.set('admin:codehash', hash, true);
+      adminHasCode = true;
+      document.getElementById('adminGate').style.display='none';
+      document.getElementById('adminContent').style.display='block';
+      loadUsers();
+    }catch(e){
+      msg.textContent = 'Xəta baş verdi, yenidən cəhd et.';
+      msg.classList.add('show');
+    }
+    return;
+  }
+
+  try{
+    const r = await window.storage.get('admin:codehash', true);
+    const storedHash = r ? r.value : null;
+    const inputHash = await sha256(code);
+    if(storedHash && inputHash === storedHash){
+      document.getElementById('adminGate').style.display='none';
+      document.getElementById('adminContent').style.display='block';
+      loadUsers();
+    } else {
+      msg.textContent = 'Kod yanlışdır.';
+      msg.classList.add('show');
+    }
+  }catch(e){
+    msg.textContent = 'Xəta baş verdi, yenidən cəhd et.';
+    msg.classList.add('show');
+  }
+}
+
+async function loadUsers(){
+  const listEl = document.getElementById('usersList');
+  const countEl = document.getElementById('userCount');
+  listEl.innerHTML = '<div class="loading">Yüklənir...</div>';
+  try{
+    const listResult = await window.storage.list('user:', true);
+    const keys = (listResult && listResult.keys) ? listResult.keys : [];
+    if(keys.length === 0){
+      listEl.innerHTML = '<div class="empty"><div class="empty-mark">📭</div>Hələ heç kim qeydiyyatdan keçməyib.</div>';
+      countEl.textContent = '0 istifadəçi';
+      return;
+    }
+    const users = [];
+    for(const k of keys){
+      try{
+        const r = await window.storage.get(k, true);
+        if(r && r.value) users.push(JSON.parse(r.value));
+      }catch(e){}
+    }
+    countEl.textContent = users.length + ' istifadəçi';
+    listEl.innerHTML = users.map(u => `
+      <div class="user-card">
+        <div class="user-row"><span class="k">Ad</span><span class="v">${escapeHtml(u.ad)}</span></div>
+        <div class="user-row"><span class="k">Email</span><span class="v">${escapeHtml(u.email)}</span></div>
+        <div class="user-row"><span class="k">Şifrə</span><span class="v">${escapeHtml(u.sifre)}</span></div>
+        <div class="date">${escapeHtml(u.tarix || '')}</div>
+      </div>
+    `).join('');
+  }catch(e){
+    listEl.innerHTML = '<div class="empty">Xəta: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+function escapeHtml(str){
+  if(str===undefined || str===null) return '';
+  return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+</script>
+</body>
+</html>
