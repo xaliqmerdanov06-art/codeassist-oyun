@@ -1,0 +1,2 @@
+rootProject.name = "CodeAssist Oyun Magazasi"
+include ':app'
